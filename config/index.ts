@@ -9,7 +9,7 @@ export default {
     host: env.TEAM_HOST,
     new: env.TEAM_NEW,
     // getMemberAll: env.IO_TEAM_ALL,
-    // getMember: env.IO_TEAM_BY_ID,
+    getMember: env.TEAM_BY_ID,
     getMemberByEmail: env.TEAM_BY_EMAIL,
   },
 };

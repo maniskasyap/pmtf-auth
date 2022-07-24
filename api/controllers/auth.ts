@@ -5,7 +5,16 @@ import { get, post } from '../../services/api-call';
 import { createSuccess, createFailure } from '../../utils/api-response';
 import config from '../../config';
 
-const getUser = async (email: string) => {
+const getUserById = async (id: string) => {
+  const url = `${config.team.host}${config.team.getMember}${id}`;
+  const user = await get({
+    url,
+  });
+
+  return user;
+};
+
+const getUserByEmail = async (email: string) => {
   const url = `${config.team.host}${config.team.getMemberByEmail}${email}`;
   const oldUser = await get({
     url,
@@ -34,7 +43,7 @@ const register = async (req: Request, res: Response, next: any) => {
       res.status(400).send(errRequired);
     }
 
-    const oldUser = await getUser(email);
+    const oldUser = await getUserByEmail(email);
 
     if (oldUser?.data.length) {
       const errOldUser = createFailure(
@@ -68,7 +77,7 @@ const login = async (req: Request, res: Response, next: any) => {
       res.status(400).send(errRequired);
     }
 
-    const user = await getUser(email);
+    const user = await getUserByEmail(email);
 
     if (!user?.data.length) {
       const errNoUser = createFailure(400, 'User not found. Please register!');
@@ -79,19 +88,12 @@ const login = async (req: Request, res: Response, next: any) => {
     const pwMatch = await bcrypt.compare(pw, userData.password);
 
     if (pwMatch) {
-      const token = jwt.sign(
-        { id: userData.userid, email },
-        config.jwt.tokenKey,
-        {
-          expiresIn: '1h',
-        }
-      );
+      const token = jwt.sign({ id: userData.userid }, config.jwt.tokenKey, {
+        expiresIn: '1h',
+      });
 
       const authResponse = createSuccess({
-        id: userData.userid,
-        name: userData.name,
-        email: userData.email,
-        avatar: userData.avatar,
+        loggedIn: true,
         token,
       });
 
@@ -120,4 +122,24 @@ const logout = async (req: Request, res: Response, next: any) => {
   // }
 };
 
-export { register, login, logout };
+const getUser = async (req: Request, res: Response, next: any) => {
+  try {
+    // const { userId } = req.params;
+    const { id } = req.user;
+
+    const user = await getUserById(id);
+    const userData = user.data[0];
+    const userResponse = createSuccess({
+      id: userData.userid,
+      name: userData.name,
+      email: userData.email,
+      avatar: userData.avatar,
+    });
+    res.send(userResponse);
+  } catch (error) {
+    const resPayload = createFailure(undefined, error);
+    res.status(500).send(resPayload);
+  }
+};
+
+export { register, login, logout, getUser };
