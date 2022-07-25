@@ -34,6 +34,12 @@ const createUser = async (user: any) => {
   return newUser;
 };
 
+const encryptPassword = async (pw: string) => {
+  const salt = await bcrypt.genSalt();
+  const encPw = await bcrypt.hash(pw, salt);
+  return encPw;
+};
+
 const register = async (req: Request, res: Response, next: any) => {
   try {
     const { name, email, pw } = req.body;
@@ -53,9 +59,7 @@ const register = async (req: Request, res: Response, next: any) => {
       return res.status(409).send(errOldUser);
     }
 
-    const salt = await bcrypt.genSalt();
-    const encPw = await bcrypt.hash(pw, salt);
-
+    const encPw = await encryptPassword(pw);
     const user = await createUser({
       name,
       email,
@@ -142,4 +146,26 @@ const getUser = async (req: Request, res: Response, next: any) => {
   }
 };
 
-export { register, login, logout, getUser };
+const updatePassword = async (req: Request, res: Response, next: any) => {
+  try {
+    const { id, newPw } = req.body;
+
+    const encPw = await encryptPassword(newPw);
+    const url = `${config.io.host}${config.io.updatePw}`;
+
+    await post({
+      url,
+      data: {
+        id,
+        pw: encPw,
+      },
+    });
+    const userResponse = createSuccess('Password updated successfully. Please login!');
+    res.send(userResponse);
+  } catch (error) {
+    const resPayload = createFailure(undefined, error);
+    res.status(500).send(resPayload);
+  }
+};
+
+export { register, login, logout, getUser, updatePassword };
